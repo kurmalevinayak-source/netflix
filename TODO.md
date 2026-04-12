@@ -1,32 +1,12 @@
-# Flutter Build Fix Progress - Netflix Clone
+# Netflix GitHub Push Task
+Current working directory: e:/netflix flutter (existing Flutter Netflix repo).
 
-## Plan Status: APPROVED ✅
-
-**Current Issue:** Path spaces break native builds (`objective_c` hook).
-
-**Immediate Fix:** Web target + clean path.
-
-## Step-by-Step Progress:
-
-### 1. Project Move [C:\netflix_flutter exists] ✅
-```
-VSCode: File → Open Folder → C:\netflix_flutter
-```
-
-### 2. Clean Build [PENDING]
-```
-cd /d C:\netflix_flutter
-flutter clean
-flutter pub get
-```
-
-### 3. Run Web [PENDING]
-```
-flutter run -d chrome
-```
-
-### 4. Verify [PENDING]
-- App loads in Chrome
-- No build errors
-
-**Next:** Execute Step 2 after opening C:\netflix_flutter.
+## Steps:
+- [ ] Step 1: Verify/install Git and GitHub CLI (user action: download Git from git-scm.com, add to PATH, restart VSCode/terminal. Install gh: `winget install --id GitHub.cli`).
+- [ ] Step 2: Run `git --version` and `gh --version` to confirm.
+- [ ] Step 3: Create and switch to branch `blackboxai/netflix-push`.
+- [ ] Step 4: `git add .`
+- [ ] Step 5: `git commit -m "Complete Netflix Flutter app with Firebase, video player, custom screens"`
+- [ ] Step 6: `git push hi blackboxai/netflix-push` (using existing 'hi' remote to your repo).
+- [ ] Step 7: `gh pr create --fill` to open PR.
+- [ ] Step 8: Merge PR on GitHub.
