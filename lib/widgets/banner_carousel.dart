@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+                                                                                                                                                                                                                    import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -48,7 +48,12 @@ class BannerCarousel extends StatelessWidget {
                     fit: BoxFit.cover,
                     width: double.infinity,
                     height: 550,
-                    placeholder: (context, url) => Container(color: Colors.grey[900]),
+                    placeholder: (context, url) => Container(
+                      color: Colors.black,
+                      child: const Center(
+                        child: CircularProgressIndicator(color: Colors.red),
+                      ),
+                    ),
                     errorWidget: (context, url, error) => Container(
                       color: Colors.grey[900],
                       child: Column(

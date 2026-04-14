@@ -93,7 +93,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextFormField(
                       controller: _emailController,
                       style: const TextStyle(color: Colors.white),
-                      textInputAction: TextInputAction.next,
                       decoration: _buildInputDecoration('Email'),
                       validator: (value) => value!.isEmpty ? 'Enter email' : null,
                     ),
@@ -102,8 +101,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       controller: _passwordController,
                       style: const TextStyle(color: Colors.white),
                       obscureText: true,
-                      textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => _login(),
                       decoration: _buildInputDecoration('Password'),
                       validator: (value) => value!.length < 6 ? 'Too short' : null,
                     ),
@@ -156,14 +153,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const Divider(color: Colors.white24, height: 40),
                   
-                  // Skip as Guest (no Firebase account required)
+                  // Skip as Guest
                   OutlinedButton(
-                    onPressed: auth.isLoading
-                        ? null
-                        : () {
-                            Provider.of<AuthProvider>(context, listen: false)
-                                .enterGuestMode();
-                          },
+                    onPressed: () async {
+                      // Login as anonymous/guest
+                      await auth.login('guest@netflix.com', 'guest123');
+                    },
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Colors.white30),
                       padding: const EdgeInsets.symmetric(vertical: 14),

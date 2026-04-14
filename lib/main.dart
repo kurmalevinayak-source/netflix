@@ -1,8 +1,6 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
-import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'providers/movie_provider.dart';
 import 'theme/app_theme.dart';
@@ -15,11 +13,8 @@ void main() async {
   bool firebaseInitialized = false;
   // Initialize Firebase (Requires user to add google-services.json/GoogleService-Info.plist or run flutterfire configure)
   try {
-    if (kIsWeb) {
-      await Firebase.initializeApp(options: DefaultFirebaseOptions.web);
-    } else {
-      await Firebase.initializeApp();
-    }
+    // Check if we can initialize Firebase without options (standard way if configured via CLI/files)
+    await Firebase.initializeApp();
     firebaseInitialized = true;
   } catch (e) {
     debugPrint("Firebase initialization failed: $e. Running in Demo Mode.");

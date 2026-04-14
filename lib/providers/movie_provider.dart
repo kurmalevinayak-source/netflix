@@ -1,15 +1,10 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import '../models/movie.dart';
 import '../services/firestore_service.dart';
 
-/// Firestore can hang when offline / wrong rules / demo keys — cap wait time.
-const Duration _firestoreTimeout = Duration(seconds: 5);
-
 class MovieProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
-
+  
   List<Movie> _trendingMovies = [];
   List<Movie> _popularMovies = [];
   List<Movie> _recommendedMovies = [];
@@ -24,66 +19,20 @@ class MovieProvider with ChangeNotifier {
   List<Movie> get watchlist => _watchlist;
   bool get isLoading => _isLoading;
 
-  Future<List<Movie>> _timedMovies(Future<List<Movie>> future) async {
-    try {
-      return await future.timeout(_firestoreTimeout);
-    } on TimeoutException {
-      debugPrint('MovieProvider: Firestore request timed out');
-      return [];
-    } catch (e) {
-      debugPrint('MovieProvider: Firestore error: $e');
-      return [];
-    }
-  }
-
   Future<void> fetchHomeData() async {
-    final hadLocalData =
-        _trendingMovies.isNotEmpty || _popularMovies.isNotEmpty;
-
-    // First visit: show catalog immediately (no long spinner waiting on Firestore).
-    if (!hadLocalData) {
-      _seedDummyData();
-      _isLoading = false;
-      notifyListeners();
-    } else {
-      _isLoading = true;
-      notifyListeners();
-    }
-
+    _isLoading = true;
+    notifyListeners();
     try {
-      final results = await Future.wait([
-        _timedMovies(_firestoreService.getTrendingMovies()),
-        _timedMovies(_firestoreService.getPopularMovies()),
-        _timedMovies(_firestoreService.getMoviesByCategory('Recommended')),
-      ]);
-
-      final trending = results[0];
-      final popular = results[1];
-      final recommended = results[2];
-
-      if (trending.isNotEmpty ||
-          popular.isNotEmpty ||
-          recommended.isNotEmpty) {
-        if (trending.isNotEmpty) _trendingMovies = trending;
-        if (popular.isNotEmpty) _popularMovies = popular;
-        if (recommended.isNotEmpty) {
-          _recommendedMovies = recommended;
-        } else if (recommended.isEmpty &&
-            (trending.isNotEmpty || popular.isNotEmpty)) {
-          final seen = <String>{};
-          _recommendedMovies = [...trending, ...popular]
-              .where((m) => seen.add(m.id))
-              .take(12)
-              .toList();
-        }
-      } else if (!hadLocalData &&
-          _trendingMovies.isEmpty &&
-          _popularMovies.isEmpty) {
+      _trendingMovies = await _firestoreService.getTrendingMovies();
+      _popularMovies = await _firestoreService.getPopularMovies();
+      _recommendedMovies = await _firestoreService.getMoviesByCategory('Recommended');
+      
+      if (_trendingMovies.isEmpty && _popularMovies.isEmpty) {
         _seedDummyData();
       }
     } catch (e) {
       debugPrint('Error fetching home data: $e');
-      if (_trendingMovies.isEmpty) _seedDummyData();
+      _seedDummyData();
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -168,9 +117,9 @@ class MovieProvider with ChangeNotifier {
     }
     _isLoading = true;
     notifyListeners();
-
-    _searchResults = await _timedMovies(_firestoreService.searchMovies(query));
-
+    
+    _searchResults = await _firestoreService.searchMovies(query);
+    
     if (_searchResults.isEmpty) {
       final List<Movie> allDummy = [..._trendingMovies, ..._popularMovies, ..._recommendedMovies];
       _searchResults = allDummy
@@ -184,14 +133,10 @@ class MovieProvider with ChangeNotifier {
   }
 
   Future<void> fetchWatchlist(List<String> movieIds) async {
-    if (movieIds.isEmpty) {
-      _watchlist = [];
-      notifyListeners();
-      return;
-    }
-    final fromRemote =
-        await _timedMovies(_firestoreService.getWatchlist(movieIds));
-    _watchlist = fromRemote;
+    _isLoading = true;
+    notifyListeners();
+    _watchlist = await _firestoreService.getWatchlist(movieIds);
+    _isLoading = false;
     notifyListeners();
   }
 

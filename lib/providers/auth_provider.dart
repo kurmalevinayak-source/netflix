@@ -3,24 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../models/user_profile.dart';
 
-/// Firebase errors where we should show the message (real credential / validation issues).
-bool _isUserFacingAuthError(FirebaseAuthException e) {
-  const codes = {
-    'wrong-password',
-    'user-not-found',
-    'invalid-email',
-    'invalid-credential',
-    'email-already-in-use',
-    'weak-password',
-    'invalid-verification-code',
-    'invalid-verification-id',
-    'credential-already-in-use',
-    'provider-already-linked',
-    'account-exists-with-different-credential',
-  };
-  return codes.contains(e.code);
-}
-
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   User? _user;
@@ -63,30 +45,17 @@ class AuthProvider with ChangeNotifier {
     try {
       final result = await _authService.signUp(email, password, name);
       if (result == null) {
+        // Fallback to demo mode if Firebase is not configured
         _isDemoMode = true;
         _userProfile = UserProfile(uid: 'demo_uid', email: email, name: name);
-      } else {
-        _isDemoMode = false;
       }
       _isLoading = false;
-      notifyListeners();
-      return null;
-    } on FirebaseAuthException catch (e) {
-      _isLoading = false;
-      if (_isUserFacingAuthError(e)) {
-        notifyListeners();
-        return e.message ?? e.code;
-      }
-      _isDemoMode = true;
-      _userProfile = UserProfile(uid: 'demo_uid', email: email, name: name);
       notifyListeners();
       return null;
     } catch (e) {
       _isLoading = false;
-      _isDemoMode = true;
-      _userProfile = UserProfile(uid: 'demo_uid', email: email, name: name);
       notifyListeners();
-      return null;
+      return e.toString();
     }
   }
 
@@ -96,45 +65,18 @@ class AuthProvider with ChangeNotifier {
     try {
       final result = await _authService.login(email, password);
       if (result == null) {
+        // Fallback to demo mode if Firebase is not configured
         _isDemoMode = true;
         _userProfile = UserProfile(uid: 'demo_uid', email: email, name: 'Demo User');
-      } else {
-        _isDemoMode = false;
       }
       _isLoading = false;
-      notifyListeners();
-      return null;
-    } on FirebaseAuthException catch (e) {
-      _isLoading = false;
-      if (_isUserFacingAuthError(e)) {
-        notifyListeners();
-        return e.message ?? e.code;
-      }
-      _isDemoMode = true;
-      _userProfile = UserProfile(uid: 'demo_uid', email: email, name: 'Demo User');
       notifyListeners();
       return null;
     } catch (e) {
       _isLoading = false;
-      _isDemoMode = true;
-      _userProfile = UserProfile(uid: 'demo_uid', email: email, name: 'Demo User');
       notifyListeners();
-      return null;
+      return e.toString();
     }
-  }
-
-  /// Skip Firebase entirely — browse the app without an account.
-  void enterGuestMode() {
-    _isDemoMode = true;
-    _user = null;
-    _userProfile = UserProfile(
-      uid: 'guest',
-      email: 'guest@demo.local',
-      name: 'Guest',
-    );
-    _isOtpSent = false;
-    _verificationId = null;
-    notifyListeners();
   }
 
   Future<void> logout() async {
@@ -186,30 +128,17 @@ class AuthProvider with ChangeNotifier {
     try {
       final result = await _authService.signInWithPhoneNumber(_verificationId!, smsCode);
       if (result == null) {
+        // Mock demo mode for testing OTP without real Firebase
         _isDemoMode = true;
         _userProfile = UserProfile(uid: 'demo_uid_otp', email: 'otp@demo.com', name: 'OTP User');
-      } else {
-        _isDemoMode = false;
       }
       _isLoading = false;
-      notifyListeners();
-      return null;
-    } on FirebaseAuthException catch (e) {
-      _isLoading = false;
-      if (_isUserFacingAuthError(e)) {
-        notifyListeners();
-        return e.message ?? e.code;
-      }
-      _isDemoMode = true;
-      _userProfile = UserProfile(uid: 'demo_uid_otp', email: 'otp@demo.com', name: 'OTP User');
       notifyListeners();
       return null;
     } catch (e) {
       _isLoading = false;
-      _isDemoMode = true;
-      _userProfile = UserProfile(uid: 'demo_uid_otp', email: 'otp@demo.com', name: 'OTP User');
       notifyListeners();
-      return null;
+      return e.toString();
     }
   }
   

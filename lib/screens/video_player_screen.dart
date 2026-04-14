@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chewie/chewie.dart';
 import 'package:video_player/video_player.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
@@ -18,12 +19,13 @@ class VideoPlayerScreen extends StatefulWidget {
 }
 
 class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
+  // For standard videos
   VideoPlayerController? _videoPlayerController;
-
+  ChewieController? _chewieController;
+  
+  // For YouTube videos
   YoutubePlayerController? _youtubeController;
-
-  void _onVideoTick() => setState(() {});
-
+  
   bool _isLoading = true;
   bool _isYoutube = false;
   bool _hasError = false;
@@ -37,7 +39,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   void _checkAndInitialize() {
     final videoId = _extractVideoId(widget.videoUrl);
-
+    
     if (videoId != null) {
       _isYoutube = true;
       _initializeYoutube(videoId);
@@ -49,7 +51,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   String? _extractVideoId(String url) {
     if (url.isEmpty) return null;
-
+    
+    // Support all common YouTube URL formats
     try {
       if (url.contains('youtu.be/')) {
         return url.split('youtu.be/').last.split('?').first;
@@ -75,7 +78,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         strictRelatedVideos: true,
       ),
     );
-
+    
     setState(() => _isLoading = false);
   }
 
@@ -86,12 +89,25 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     });
 
     try {
-      _videoPlayerController =
-          VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
+      _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
       await _videoPlayerController!.initialize();
-      _videoPlayerController!.addListener(_onVideoTick);
-      await _videoPlayerController!.play();
 
+      _chewieController = ChewieController(
+        videoPlayerController: _videoPlayerController!,
+        autoPlay: true,
+        looping: false,
+        fullScreenByDefault: true,
+        allowFullScreen: true,
+        aspectRatio: _videoPlayerController!.value.aspectRatio,
+        placeholder: const Center(child: SpinKitPulse(color: Colors.red)),
+        materialProgressColors: ChewieProgressColors(
+          playedColor: Colors.red,
+          handleColor: Colors.red,
+          backgroundColor: Colors.grey,
+          bufferedColor: Colors.white.withOpacity(0.5),
+        ),
+      );
+      
       setState(() => _isLoading = false);
     } catch (e) {
       debugPrint('Video init error: $e');
@@ -103,21 +119,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     }
   }
 
-  void _togglePlayPause() {
-    final c = _videoPlayerController;
-    if (c == null || !c.value.isInitialized) return;
-    if (c.value.isPlaying) {
-      c.pause();
-    } else {
-      c.play();
-    }
-    setState(() {});
-  }
-
   @override
   void dispose() {
-    _videoPlayerController?.removeListener(_onVideoTick);
     _videoPlayerController?.dispose();
+    _chewieController?.dispose();
+    // youtube_player_iframe controller doesn't need explicit dispose in this version
+    // but we clear the reference for safety.
     _youtubeController = null;
     super.dispose();
   }
@@ -127,7 +134,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        backgroundColor: Colors.black.withValues(alpha: 0.5),
+        backgroundColor: Colors.black.withOpacity(0.5),
         elevation: 0,
         title: Text(widget.title, style: const TextStyle(fontSize: 16)),
         leading: IconButton(
@@ -154,75 +161,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           return player;
         },
       );
+    } else {
+      return _chewieController != null && _chewieController!.videoPlayerController.value.isInitialized
+          ? Chewie(controller: _chewieController!)
+          : const SpinKitFadingCircle(color: Colors.red);
     }
-
-    final c = _videoPlayerController;
-    if (c == null || !c.value.isInitialized) {
-      return const SpinKitFadingCircle(color: Colors.red);
-    }
-
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Expanded(
-          child: Center(
-            child: AspectRatio(
-              aspectRatio: c.value.aspectRatio,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  VideoPlayer(c),
-                  GestureDetector(
-                    onTap: _togglePlayPause,
-                    behavior: HitTestBehavior.opaque,
-                    child: AnimatedOpacity(
-                      opacity: c.value.isPlaying ? 0.0 : 1.0,
-                      duration: const Duration(milliseconds: 200),
-                      child: Container(
-                        color: Colors.black26,
-                        child: const Icon(
-                          Icons.play_circle_filled,
-                          color: Colors.white,
-                          size: 72,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: VideoProgressIndicator(
-            c,
-            allowScrubbing: true,
-            colors: const VideoProgressColors(
-              playedColor: Colors.red,
-              bufferedColor: Colors.white24,
-              backgroundColor: Colors.grey,
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton(
-                icon: Icon(
-                  c.value.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
-                  color: Colors.white,
-                  size: 48,
-                ),
-                onPressed: _togglePlayPause,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
   }
 
   Widget _buildErrorWidget() {
@@ -233,11 +176,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         children: [
           const Icon(Icons.error_outline, color: Colors.red, size: 60),
           const SizedBox(height: 16),
-          Text(
-            _errorMessage ?? 'Error loading video',
-            style: const TextStyle(color: Colors.white, fontSize: 16),
-            textAlign: TextAlign.center,
-          ),
+          Text(_errorMessage ?? 'Error loading video', 
+               style: const TextStyle(color: Colors.white, fontSize: 16),
+               textAlign: TextAlign.center),
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () => Navigator.pop(context),

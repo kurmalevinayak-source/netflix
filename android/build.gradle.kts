@@ -1,18 +1,7 @@
 allprojects {
     repositories {
-        // AndroidX is not on Maven Central; Gradle 8.14 can still query Central first. Scope repos by group.
-        maven {
-            url = uri("https://dl.google.com/dl/android/maven2/")
-            content {
-                includeGroupByRegex("androidx.*")
-            }
-        }
         google()
-        mavenCentral {
-            content {
-                excludeGroupByRegex("androidx.*")
-            }
-        }
+        mavenCentral()
     }
 }
 
